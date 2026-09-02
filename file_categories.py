@@ -30,37 +30,3 @@ files_categories = {
     
     "Subtitles": [".srt", ".ass", ".vtt"]
 }
-
-empty_dict={
-    "Images": [],
-    
-    "Documents": [],
-    
-    "Spreadsheets": [],
-    
-    "Presentations": [],
-    
-    "Music": [],
-    
-    "Videos": [],
-    
-    "Archives": [],
-    
-    "Python": [],
-    
-    "Programming": [],
-    
-    "Databases": [],
-    
-    "Fonts": [],
-    
-    "Executables": [],
-    
-    "Configuration": [],
-    
-    "Logs": [],
-    
-    "Subtitles": [],
-
-    "Others":[]
-}
