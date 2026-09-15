@@ -4,6 +4,15 @@ import os
 import file_categories as f
 import time
 import hashlib
+import logging
+import uuid
+logging.basicConfig(filename = "trial.log",
+                     level = logging.INFO,
+                     format = "%(asctime)s - %(levelname)s - %(message)s")
+
+def generate_uid():
+    unique_id = str(uuid.uuid4())
+    return unique_id
 
 def path_existence(path):
     '''Check thats path exists and also tells whether it is file or folder'''
@@ -57,85 +66,115 @@ def list_of_files_folders(user_path):
     for files in user_path.iterdir():
         files=Path(files)
         if files.is_file():
-            files_in_path.append(files.name)
+            files_in_path.append(files)
         elif files.is_dir():
             folders_in_path.append(files)
     return files_in_path, folders_in_path
 
-def create_folder_move_file(file,create_folder):
+def create_folder_move_file(file_location,create_folder,unique_id):
     create_folder.mkdir(exist_ok=True)
-    old_destination = user_path / file
-    new_destination = create_folder / file
-    shutil.move(old_destination, new_destination)
+    new_destination = create_folder / file_location.name
+    shutil.move(file_location, new_destination)
+    logging.info(f'{unique_id} - File Moved - {file_location}')
+    logging.info(f'{unique_id} - Moved to - {new_destination}')
 
 def sort_files_by_filetype(user_path):
     '''Sorting files by file type'''
     user_path=Path(user_path)
     files_in_path,folders_in_path=list_of_files_folders(user_path)
-    for file in files_in_path:
-        file = Path(file)
-
-        tempoValue = 0        
-        for key,value in f.files_categories.items():
-            if file.suffix in value:
-                create_folder = user_path / key
-                create_folder_move_file(file,create_folder)       
-                tempoValue=1
-
-        if tempoValue == 0:                       
-            create_folder = user_path / "Others"
-            create_folder_move_file(file,create_folder)
+    if len(files_in_path) == 0:
+        print("No files in given folder")
+        input("Click enter")
+    else:
+        unique_id = generate_uid()
+        logging.info(f'{unique_id} - Moving Process Started')
+        for file in files_in_path:
+            file = Path(file)
+            tempoValue = 0        
+            for key,value in f.files_categories.items():
+                if file.suffix in value:
+                    create_folder = user_path / key
+                    create_folder_move_file(file,create_folder,unique_id)       
+                    tempoValue=1
+            if tempoValue == 0:                       
+                create_folder = user_path / "Others"
+                create_folder_move_file(file,create_folder,unique_id)
+        logging.info(f'{unique_id} - Moving Procces Ended')
 
 def sort_files_by_time(user_path):
     '''Sorting files by time'''
     user_path=Path(user_path)
     files_in_path,folders_in_path = list_of_files_folders(user_path)
-    present_time_info_list=present_time_info()
-    for file in files_in_path:
-        file_location = user_path / file
-        file_time_info_list = file_time_info(file_location)
-        if file_time_info_list[3] == present_time_info_list[3] and file_time_info_list[1] == present_time_info_list[1]:
-            create_folder = user_path / "Today"
-            create_folder_move_file(file,create_folder)
-        elif file_time_info_list[3] == present_time_info_list[3] and file_time_info_list[1] + 1 == present_time_info_list[1]:
-            create_folder = user_path / "Yesterday"
-            create_folder_move_file(file,create_folder)
-        elif file_time_info_list[3] - present_time_info_list[3] == 1 and present_time_info_list[1] == 1:
-            create_folder = user_path / "Yesterday"
-            create_folder_move_file(file,create_folder)
-        else:
-            create_folder = user_path / "Yesterday"
-            create_folder_move_file(file,create_folder)
+    if len(files_in_path) == 0:
+        print("No files in given folder")
+        input("Click enter")
+    else:
+        unique_id = generate_uid()
+        logging.info(f'{unique_id} - Moving Process Started')
+        present_time_info_list=present_time_info()
+        for file in files_in_path:
+            file_time_info_list = file_time_info(file)
+            if file_time_info_list[3] == present_time_info_list[3] and file_time_info_list[1] == present_time_info_list[1]:
+                create_folder = user_path / "Today"
+                create_folder_move_file(file,create_folder,unique_id)
+            elif file_time_info_list[3] == present_time_info_list[3] and file_time_info_list[1] + 1 == present_time_info_list[1]:
+                create_folder = user_path / "Yesterday"
+                create_folder_move_file(file,create_folder,unique_id)
+            elif file_time_info_list[3] - present_time_info_list[3] == 1 and present_time_info_list[1] == 1:
+                create_folder = user_path / "Yesterday"
+                create_folder_move_file(file,create_folder,unique_id)
+            else:
+                create_folder = user_path / "Others"
+                create_folder_move_file(file,create_folder,unique_id)
+        logging.info(f'{unique_id} - Moving Process Ended')
 
 def sort_files_by_date(user_path):
     user_path=Path(user_path)
     files_in_path,folders_in_path = list_of_files_folders(user_path)
-    for file in files_in_path:
-        file_location = user_path / file
-        t=file_time_info(file_location)
-        folder_name = f'{t[4]}-{t[2]}-{t[3]}'
-        create_folder = user_path / folder_name
-        create_folder_move_file(file,create_folder)
+    if len(files_in_path) == 0:
+        print("No files in given path")
+        input("Click enter")
+    else:
+        unique_id = generate_uid()
+        logging.info(f'{unique_id} - Moving Process Started')
+        for file in files_in_path:
+            t=file_time_info(file)
+            folder_name = f'{t[4]}-{t[2]}-{t[3]}'
+            create_folder = user_path / folder_name
+            create_folder_move_file(file,create_folder,unique_id)
+        logging.info(f'{unique_id} - Moving Process Ended')
 
 def sort_files_by_month(user_path):
     user_path=Path(user_path)
     files_in_path,folders_in_path = list_of_files_folders(user_path)
-    for file in files_in_path:
-        file_location = user_path / file
-        t=file_time_info(file_location)
-        folder_name = f'{t[2]}-{t[3]}'
-        create_folder = user_path / folder_name
-        create_folder_move_file(file,create_folder)
+    if len(files_in_path) == 0:
+        print("No files in given path")
+        input("Click enter")
+    else:
+        unique_id = generate_uid()
+        logging.info(f'{unique_id} - Moving Process Started')
+        for file in files_in_path:
+            t=file_time_info(file)
+            folder_name = f'{t[2]}-{t[3]}'
+            create_folder = user_path / folder_name
+            create_folder_move_file(file,create_folder,unique_id)
+        logging.info(f'{unique_id} - Moving Process Ended')
 
 def sort_files_by_year(user_path):
     user_path=Path(user_path)
     files_in_path,folders_in_path = list_of_files_folders(user_path)
-    for file in files_in_path:
-        file_location = user_path / file
-        t=file_time_info(file_location)
-        folder_name = f'{t[3]}'
-        create_folder = user_path / folder_name
-        create_folder_move_file(file,create_folder)
+    if len(files_in_path) == 0:
+        print("No files in given path")
+        input("Click enter")
+    else:
+        unique_id = generate_uid()
+        logging.info(f'{unique_id} - Moving Process Started')
+        for file in files_in_path:
+            t=file_time_info(file)
+            folder_name = f'{t[3]}'
+            create_folder = user_path / folder_name
+            create_folder_move_file(file,create_folder,unique_id)
+        logging.info(f'{unique_id} - Moving Process Ended')
 
 def get_file_hash(file_path):
     hash_object = hashlib.sha256()
@@ -197,6 +236,41 @@ def merge_duplicate_files(files_path_list):
                 break
             else:
                 break
+
+def undo_last_action():
+    # logging.info("Undo Process Started")
+    with open("trial.log", "rt") as log_file:
+        last_process = ""
+        log_file.seek(0,2)
+        total = log_file.tell()
+        log_file.seek(0)
+        while True:
+            line = log_file.readline()
+            if "Moving Process Started" in line:
+                last_process = line.strip()
+                line_post = log_file.tell()
+            if log_file.tell() >= total:
+                break
+        uid = last_process.split(" - ",3)[2]
+        log_file.seek(line_post)
+        while True:
+            old_dest_line = log_file.readline()
+            old_dest = old_dest_line.split(" - ", 4)[4].strip()
+            new_dest_line = log_file.readline()
+            new_dest = new_dest_line.split(" - ", 4)[4].strip()
+            try:
+                shutil.move(new_dest, old_dest)
+                folder = Path(new_dest).parent
+                if len(list(folder.iterdir())) == 0:
+                    os.rmdir(folder)
+            except:
+                print(f"{new_dest} - This file has a problem")
+            location = log_file.tell()
+            if "Moving Procces Ended" in log_file.readline():
+                break
+            else:
+                log_file.seek(location)
+        
 
 #Welcoming user
 print("="*50)
@@ -312,7 +386,9 @@ elif user_choosen_srno == 2:
 
 elif user_choosen_srno==3:
     # Undo last operation
-    pass
+    input("Confirm undo operation by clicking enter")
+    undo_last_action()
+    print("Done")
 
 elif user_choosen_srno==3:
     # View activity log
