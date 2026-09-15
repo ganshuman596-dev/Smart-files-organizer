@@ -246,31 +246,59 @@ def undo_last_action():
         log_file.seek(0)
         while True:
             line = log_file.readline()
-            if "Moving Process Started" in line:
+            if "Moving Process Started" in line or "Undo Process Started" in line:
                 last_process = line.strip()
                 line_post = log_file.tell()
-            if log_file.tell() >= total:
+            elif log_file.tell() >= total:
                 break
-        uid = last_process.split(" - ",3)[2]
-        log_file.seek(line_post)
+        if "Moving Process Started" in last_process:
+            unique_id = generate_uid()
+            logging.info(f"{unique_id} - Undo Process Started")
+            uid = last_process.split(" - ",3)[2]
+            log_file.seek(line_post)
+            while True:
+                old_dest_line = log_file.readline()
+                old_dest = old_dest_line.split(" - ", 4)[4].strip()
+                new_dest_line = log_file.readline()
+                new_dest = new_dest_line.split(" - ", 4)[4].strip()
+                try:
+                    shutil.move(new_dest, old_dest)
+                    logging.info(f'{unique_id} - File Moved - {new_dest}')
+                    logging.info(f'{unique_id} - Moved to - {old_dest}')
+                    folder = Path(new_dest).parent
+                    if len(list(folder.iterdir())) == 0:
+                        os.rmdir(folder)
+                except:
+                    print(f"{new_dest} - This file has a problem")
+                location = log_file.tell()
+                if "Moving Procces Ended" in log_file.readline():
+                    break
+                else:
+                    log_file.seek(location)
+            logging.info(f"{unique_id} - Undo Process Ended")
+        elif "Moving Process Started" in last_process:
+            print("Last Process was undo")      
+
+def view_last_action_log():
+    with open("trial.log", "rt") as log_file:
+        last_process = ""
+        log_file.seek(0,2)
+        total = log_file.tell()
+        log_file.seek(0)
         while True:
-            old_dest_line = log_file.readline()
-            old_dest = old_dest_line.split(" - ", 4)[4].strip()
-            new_dest_line = log_file.readline()
-            new_dest = new_dest_line.split(" - ", 4)[4].strip()
-            try:
-                shutil.move(new_dest, old_dest)
-                folder = Path(new_dest).parent
-                if len(list(folder.iterdir())) == 0:
-                    os.rmdir(folder)
-            except:
-                print(f"{new_dest} - This file has a problem")
-            location = log_file.tell()
-            if "Moving Procces Ended" in log_file.readline():
+            line = log_file.readline()
+            if "Moving Process Started" in line or "Undo Process Started" in line:
+                last_process = line.strip()
+                line_post = log_file.tell()
+            elif log_file.tell() >= total:
                 break
-            else:
-                log_file.seek(location)
-        
+        log_file.seek(line_post)
+        print(last_process)
+        while True:
+            print(log_file.readline())
+            if log_file.tell() >= total:
+                        break
+
 
 #Welcoming user
 print("="*50)
@@ -279,7 +307,7 @@ print("="*50)
 print("1. Organize files")
 print("2. Find duplicates")
 print("3. Undo last operation")
-print("4. View activity log")
+print("4. View last action activity log")
 print("5. Exit")
 
 while True:
@@ -390,9 +418,10 @@ elif user_choosen_srno==3:
     undo_last_action()
     print("Done")
 
-elif user_choosen_srno==3:
+elif user_choosen_srno==4:
     # View activity log
-    pass
+    view_last_action_log()
+    print("Done")
 
 else:
     #exit
