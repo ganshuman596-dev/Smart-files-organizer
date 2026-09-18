@@ -15,12 +15,12 @@ def generate_uid():
     return unique_id
 
 def path_existence(path):
-    '''Check thats path exists and also tells whether it is file or folder'''
+    '''Check thats path exists and also tells whether it is folder'''
     if path.exists():
-        if path.is_file():
-            return "file"
-        else:
+        if path.is_dir():
             return "folder"
+        else:
+            return "not folder"
     else:
         return "notExist"
 
@@ -49,7 +49,7 @@ def file_time_info(file):
 def take_path_from_user():
     while True:
         user_path = Path(input("Enter the path of folder: "))
-        if path_existence(user_path) == "file":
+        if path_existence(user_path) == "not folder":
             print("The path entered is not a folder!")
             input("Click enter")
         elif path_existence(user_path) == "notExist":
@@ -74,6 +74,14 @@ def list_of_files_folders(user_path):
 def create_folder_move_file(file_location,create_folder,unique_id):
     create_folder.mkdir(exist_ok=True)
     new_destination = create_folder / file_location.name
+    while True:
+        if new_destination.exists():
+            print(f"{file_location.name} already exists in the folder")
+            newname = input("enter the name without suffix: ")
+            newname_ext = Path(newname + file_location.suffix)
+            new_destination = create_folder / newname_ext
+        else:
+            break
     shutil.move(file_location, new_destination)
     logging.info(f'{unique_id} - File Moved - {file_location}')
     logging.info(f'{unique_id} - Moved to - {new_destination}')
@@ -90,16 +98,17 @@ def sort_files_by_filetype(user_path):
         logging.info(f'{unique_id} - Moving Process Started')
         for file in files_in_path:
             file = Path(file)
-            tempoValue = 0        
+            found_category = False       
             for key,value in f.files_categories.items():
                 if file.suffix in value:
                     create_folder = user_path / key
                     create_folder_move_file(file,create_folder,unique_id)       
-                    tempoValue=1
-            if tempoValue == 0:                       
+                    found_category = True
+                    break
+            if not found_category:                       
                 create_folder = user_path / "Others"
                 create_folder_move_file(file,create_folder,unique_id)
-        logging.info(f'{unique_id} - Moving Procces Ended')
+        logging.info(f'{unique_id} - Moving Process Ended')
 
 def sort_files_by_time(user_path):
     '''Sorting files by time'''
@@ -120,7 +129,7 @@ def sort_files_by_time(user_path):
             elif file_time_info_list[3] == present_time_info_list[3] and file_time_info_list[1] + 1 == present_time_info_list[1]:
                 create_folder = user_path / "Yesterday"
                 create_folder_move_file(file,create_folder,unique_id)
-            elif file_time_info_list[3] - present_time_info_list[3] == 1 and present_time_info_list[1] == 1:
+            elif file_time_info_list[3] == present_time_info_list[3] - 1 and present_time_info_list[1] == 1:
                 create_folder = user_path / "Yesterday"
                 create_folder_move_file(file,create_folder,unique_id)
             else:
@@ -194,7 +203,7 @@ def get_duplicates(user_path):
     groups_by_hash = {}
     duplicates = {}
     for file in files_in_path:
-        file_path = user_path / file
+        file_path = Path(file)
         info = file_path.stat()
         file_size = info.st_size
         if file_size not in groups_by_size:
@@ -238,7 +247,6 @@ def merge_duplicate_files(files_path_list):
                 break
 
 def undo_last_action():
-    # logging.info("Undo Process Started")
     with open("trial.log", "rt") as log_file:
         last_process = ""
         log_file.seek(0,2)
@@ -254,12 +262,17 @@ def undo_last_action():
         if "Moving Process Started" in last_process:
             unique_id = generate_uid()
             logging.info(f"{unique_id} - Undo Process Started")
-            uid = last_process.split(" - ",3)[2]
             log_file.seek(line_post)
             while True:
                 old_dest_line = log_file.readline()
+                if "File Moved" not in old_dest_line:
+                    print("There is somthing problematic in log file.")
+                    break
                 old_dest = old_dest_line.split(" - ", 4)[4].strip()
                 new_dest_line = log_file.readline()
+                if "Moved to" not in new_dest_line:
+                    print("There is somthing problematic in log file.")
+                    break
                 new_dest = new_dest_line.split(" - ", 4)[4].strip()
                 try:
                     shutil.move(new_dest, old_dest)
@@ -271,13 +284,15 @@ def undo_last_action():
                 except:
                     print(f"{new_dest} - This file has a problem")
                 location = log_file.tell()
-                if "Moving Procces Ended" in log_file.readline():
+                if "Moving Process Ended" in log_file.readline():
                     break
                 else:
                     log_file.seek(location)
             logging.info(f"{unique_id} - Undo Process Ended")
-        elif "Moving Process Started" in last_process:
-            print("Last Process was undo")      
+        elif "Undo Process Started" in last_process:
+            print("Last Process was undo")  
+        else:
+            print("No process found!")    
 
 def view_last_action_log():
     with open("trial.log", "rt") as log_file:
@@ -285,19 +300,25 @@ def view_last_action_log():
         log_file.seek(0,2)
         total = log_file.tell()
         log_file.seek(0)
+        checker = False
         while True:
             line = log_file.readline()
             if "Moving Process Started" in line or "Undo Process Started" in line:
                 last_process = line.strip()
                 line_post = log_file.tell()
+                checker = True
             elif log_file.tell() >= total:
                 break
-        log_file.seek(line_post)
-        print(last_process)
-        while True:
-            print(log_file.readline())
-            if log_file.tell() >= total:
-                        break
+        if not checker:
+            print("No activity log")
+        else:
+            log_file.seek(line_post)
+            print(last_process)
+            while True:
+                if log_file.tell() >= total:
+                    break
+                print(log_file.readline())
+                
 
 
 #Welcoming user
@@ -412,17 +433,20 @@ elif user_choosen_srno == 2:
                 print("Done!")
                 input("Click enter")
 
-elif user_choosen_srno==3:
+elif user_choosen_srno == 3:
     # Undo last operation
     input("Confirm undo operation by clicking enter")
     undo_last_action()
     print("Done")
 
-elif user_choosen_srno==4:
+elif user_choosen_srno == 4:
     # View activity log
     view_last_action_log()
     print("Done")
 
-else:
+elif user_choosen_srno == 5:
     #exit
-    pass
+    input("Click Enter")
+
+else:
+    print("Invalid Input!")
